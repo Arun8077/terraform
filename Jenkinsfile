@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // AWS credentials stored in Jenkins
-        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-access-key')
-        AWS_DEFAULT_REGION    = 'ap-south-1'
-    }
-
     parameters {
         booleanParam(
             name: 'APPLY', 
@@ -25,37 +18,35 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
+        stage('Debug Workspace') {
             steps {
                 dir('resource-ec2') {
-                    sh 'terraform init -input=false'
+                    sh 'ls -l'
                 }
             }
         }
 
-        stage('Terraform Validate') {
+        stage('Terraform Steps') {
             steps {
-                dir('resource-ec2') {
-                    sh 'terraform validate'
-                }
-            }
-        }
+                // Inject AWS credentials
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-cred',        // Jenkins credential ID
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    dir('resource-ec2') {
+                        sh 'terraform init -input=false'
+                        sh 'terraform validate'
+                        sh 'terraform plan -out=tfplan'
 
-        stage('Terraform Plan') {
-            steps {
-                dir('resource-ec2') {
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
-
-        stage('Terraform Apply') {
-            when {
-                expression { return params.APPLY == true }
-            }
-            steps {
-                dir('resource-ec2') {
-                    sh 'terraform apply -auto-approve tfplan'
+                        script {
+                            if (params.APPLY) {
+                                sh 'terraform apply -auto-approve tfplan'
+                            } else {
+                                echo "APPLY is false, skipping terraform apply"
+                            }
+                        }
+                    }
                 }
             }
         }
