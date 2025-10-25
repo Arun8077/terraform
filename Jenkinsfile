@@ -4,7 +4,7 @@ pipeline {
     environment {
         // AWS credentials stored in Jenkins
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-access-key')
         AWS_DEFAULT_REGION    = 'ap-south-1'
     }
 
