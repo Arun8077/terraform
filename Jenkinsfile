@@ -19,7 +19,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
+                git branch: 'terraform_feature',
                     url: 'https://github.com/Arun8077/terraform.git',
                     credentialsId: 'github-cred'
             }
@@ -27,7 +27,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir('terraform/resource-ec2') {
+                dir('resource-ec2') {
                     sh 'terraform init -input=false'
                 }
             }
@@ -35,7 +35,7 @@ pipeline {
 
         stage('Terraform Validate') {
             steps {
-                dir('terraform/resource-ec2') {
+                dir('resource-ec2') {
                     sh 'terraform validate'
                 }
             }
@@ -43,7 +43,7 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                dir('terraform/resource-ec2') {
+                dir('resource-ec2') {
                     sh 'terraform plan -out=tfplan'
                 }
             }
@@ -54,7 +54,7 @@ pipeline {
                 expression { return params.APPLY == true }
             }
             steps {
-                dir('terraform/resource-ec2') {
+                dir('resource-ec2') {
                     sh 'terraform apply -auto-approve tfplan'
                 }
             }
