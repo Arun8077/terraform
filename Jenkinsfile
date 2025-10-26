@@ -2,15 +2,20 @@ pipeline {
     agent any
 
     parameters {
-        booleanParam(
-            name: 'APPLY', 
-            defaultValue: false, 
-            description: 'Apply Terraform changes? If false, only plan will run'
+        choice(
+            name: 'ENV',
+            choices: ['dev', 'prod'],
+            description: 'Select environment to deploy'
         )
         booleanParam(
-            name: 'DESTROY',
+            name: 'APPLY', 
             defaultValue: false,
-            description: 'Destroy Terraform-managed resources after creation'
+            description: 'Apply Terraform changes'
+        )
+        booleanParam(
+            name: 'DESTROY', 
+            defaultValue: false,
+            description: 'Destroy Terraform-managed resources'
         )
     }
 
@@ -23,40 +28,24 @@ pipeline {
             }
         }
 
-        stage('Debug Workspace') {
-            steps {
-                dir('resource-ec2') {
-                    sh 'ls -l'
-                }
-            }
-        }
-
         stage('Terraform Steps') {
             steps {
-                // Inject AWS credentials
                 withCredentials([usernamePassword(
-                    credentialsId: 'aws-cred',        // Jenkins credential ID
+                    credentialsId: 'aws-cred',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
-                    dir('resource-ec2') {
+                    dir("envs/${params.ENV}") {
                         sh 'terraform init -input=false'
                         sh 'terraform validate'
-                        sh 'terraform plan -out=tfplan'
+                        sh 'terraform plan -out=tfplan -var-file=terraform.tfvars'
 
                         script {
                             if (params.APPLY) {
-                                echo "Applying Terraform changes..."
                                 sh 'terraform apply -auto-approve tfplan'
-                            } else {
-                                echo "APPLY is false, skipping terraform apply"
                             }
-
                             if (params.DESTROY) {
-                                echo "Destroying Terraform-managed resources..."
-                                sh 'terraform destroy -auto-approve'
-                            } else {
-                                echo "DESTROY is false, skipping terraform destroy"
+                                sh 'terraform destroy -auto-approve -var-file=terraform.tfvars'
                             }
                         }
                     }
@@ -67,7 +56,7 @@ pipeline {
 
     post {
         always {
-            echo 'Terraform pipeline completed.'
+            echo "Terraform pipeline for environment ${params.ENV} completed."
         }
     }
 }
