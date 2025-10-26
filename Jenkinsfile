@@ -7,6 +7,11 @@ pipeline {
             defaultValue: false, 
             description: 'Apply Terraform changes? If false, only plan will run'
         )
+        booleanParam(
+            name: 'DESTROY',
+            defaultValue: false,
+            description: 'Destroy Terraform-managed resources after creation'
+        )
     }
 
     stages {
@@ -41,9 +46,17 @@ pipeline {
 
                         script {
                             if (params.APPLY) {
+                                echo "Applying Terraform changes..."
                                 sh 'terraform apply -auto-approve tfplan'
                             } else {
                                 echo "APPLY is false, skipping terraform apply"
+                            }
+
+                            if (params.DESTROY) {
+                                echo "Destroying Terraform-managed resources..."
+                                sh 'terraform destroy -auto-approve'
+                            } else {
+                                echo "DESTROY is false, skipping terraform destroy"
                             }
                         }
                     }
